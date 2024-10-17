@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Ranking App</title>
+    <title>Movie Ranking App with Graded Curves</title>
     <style>
         /* General Body Styles */
         body {
@@ -156,7 +156,7 @@
     </style>
 </head>
 <body>
-    <h1>Movie Ranking App</h1>
+    <h1>Movie Ranking App with Graded Curves</h1>
     
     <div id="container">
         <!-- Form to Add Movie -->
@@ -296,50 +296,48 @@
             if (category === 'bad') return 1200;    // Elo mid-point for bad movies
         }
 
-        // Map Elo scores to a 5.0–9.0 range initially, then expand based on the number of movies
-        function mapEloToScore(elo, minElo, maxElo, numMovies) {
-            const baseMin = 5.0;
-            const baseMax = 9.0;
-            const fullRange = 10.0;  // 0.0–10.0 full range
-            const expansionFactor = Math.min((numMovies - 1) / 10, 1);  // Expands as more movies are added
-
-            const minScore = baseMin - (baseMin * expansionFactor);  // Dynamic lower boundary
-            const maxScore = baseMax + (fullRange - baseMax) * expansionFactor;  // Dynamic upper boundary
-
-            if (maxElo === minElo) return (minScore + maxScore) / 2;  // Handle case where all movies have the same Elo
-
-            // Map Elo score to the dynamic range
-            return ((elo - minElo) / (maxElo - minElo)) * (maxScore - minScore) + minScore;
-        }
-
-        // Ensure no duplicate scores by adjusting slight differences in scores
-        function ensureUniqueScores(movieList) {
-            for (let i = 0; i < movieList.length - 1; i++) {
-                if (movieList[i].score === movieList[i + 1].score) {
-                    movieList[i + 1].score -= 0.1;  // Adjust the next movie score slightly down
-                }
-            }
+        // Normalization function for graded scoring within categories
+        function normalizeScore(elo, minElo, maxElo, minRange, maxRange) {
+            if (maxElo === minElo) return (minRange + maxRange) / 2;  // Handle equal Elo scores
+            return ((elo - minElo) / (maxElo - minElo)) * (maxRange - minRange) + minRange;
         }
 
         // Update the displayed list of ranked movies, ensuring unique scores
         function updateRanking() {
             const allMovies = [...movies.great, ...movies.okay, ...movies.bad];
+
+            // Sort movies by category and score
             allMovies.sort((a, b) => b.score - a.score);  // Sort all movies by score
 
             const list = document.getElementById('movieList');
             list.innerHTML = '';  // Clear the current list
 
-            allMovies.forEach((movie, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="movie-number">${index + 1}.</div>
-                    <div class="movie-name">${movie.name}</div>
-                    <div class="movie-score">${mapEloToScore(movie.score, Math.min(...allMovies.map(m => m.score)), Math.max(...allMovies.map(m => m.score)), allMovies.length).toFixed(1)}</div>
-                `;
-                list.appendChild(li);
-            });
+            const numMovies = allMovies.length;
 
-            ensureUniqueScores(allMovies);  // Ensure no duplicate scores
+            // Normalize scores for each category
+            function mapCategoryScores(category, minRange, maxRange) {
+                const categoryMovies = movies[category];
+                if (categoryMovies.length > 0) {
+                    const minElo = Math.min(...categoryMovies.map(m => m.score));
+                    const maxElo = Math.max(...categoryMovies.map(m => m.score));
+
+                    categoryMovies.forEach((movie, index) => {
+                        const scaledScore = normalizeScore(movie.score, minElo, maxElo, minRange, maxRange).toFixed(1);
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div class="movie-number">${allMovies.indexOf(movie) + 1}.</div>
+                            <div class="movie-name">${movie.name}</div>
+                            <div class="movie-score">${scaledScore}</div>
+                        `;
+                        list.appendChild(li);
+                    });
+                }
+            }
+
+            // Map scores for each category
+            mapCategoryScores('great', 7.0, 10.0);  // Great movies should be scored between 7.0 and 10.0
+            mapCategoryScores('okay', 4.0, 7.0);    // Okay movies should be scored between 4.0 and 7.0
+            mapCategoryScores('bad', 0.0, 4.0);     // Bad movies should be scored between 0.0 and 4.0
         }
     </script>
 </body>

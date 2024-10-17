@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Improved Movie Ranking App</title>
+    <title>Movie Ranking App</title>
     <style>
+        /* General Body Styles */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f0f5;
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f7f7f7;
             color: #333;
             margin: 0;
             padding: 0;
@@ -19,18 +20,69 @@
             margin-top: 0;
             background-color: #3a86ff;
             color: white;
-            font-size: 2.2em;
+            font-size: 2.5em;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
 
+        /* Container */
         #container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 40px auto;
             background-color: white;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
             border-radius: 12px;
         }
 
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 1.1em;
+        }
+
+        /* Input Field */
+        input[type="text"] {
+            padding: 12px;
+            width: calc(100% - 24px);
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        /* Button Styles */
+        button {
+            background-color: #3a86ff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s;
+            display: inline-block;
+        }
+
+        button:hover {
+            background-color: #0044cc;
+            transform: translateY(-2px);
+        }
+
+        button.secondary {
+            background-color: #f3722c;
+        }
+
+        button.secondary:hover {
+            background-color: #d05600;
+        }
+
+        #comparisonSection button {
+            margin-top: 10px;
+        }
+
+        /* Movie List */
         ol {
             list-style: none;
             padding-left: 0;
@@ -39,51 +91,56 @@
 
         ol li {
             padding: 12px;
-            background-color: #edf2f4;
+            background-color: #f0f4f8;
             margin-bottom: 8px;
-            border-radius: 5px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         ol li:hover {
-            background-color: #a8dadc;
+            background-color: #dfe7ec;
         }
 
         .movie-number {
             font-weight: bold;
             font-size: 1.2em;
-            color: #333;
+            color: #444;
         }
 
         .movie-name {
             font-weight: bold;
             font-size: 1.1em;
             margin-left: 10px;
+            flex-grow: 1;
+            text-align: left;
         }
 
+        /* Circle Score */
         .movie-score {
             background-color: #000;
             color: white;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.1em;
+            font-size: 1.2em;
             margin-right: 10px;
         }
 
+        /* Responsive Media Query */
         @media (max-width: 768px) {
             #container {
                 padding: 20px;
             }
 
             h1 {
-                font-size: 1.8em;
+                font-size: 2em;
             }
 
             ol li {
@@ -95,12 +152,35 @@
                 margin-top: 10px;
             }
         }
+
     </style>
 </head>
 <body>
-    <h1>Improved Movie Ranking App</h1>
+    <h1>Movie Ranking App</h1>
     
     <div id="container">
+        <!-- Form to Add Movie -->
+        <div id="movieForm">
+            <label for="movieName">Add a Movie:</label>
+            <input type="text" id="movieName" placeholder="Enter movie name">
+            <button onclick="submitMovie()">Submit</button>
+        </div>
+
+        <!-- Section for Initial Rating -->
+        <div id="initialRating" style="display: none;" class="center">
+            <p>How was the movie?</p>
+            <button class="secondary" onclick="rateMovie('great')">Great</button>
+            <button class="secondary" onclick="rateMovie('okay')">Okay</button>
+            <button class="secondary" onclick="rateMovie('bad')">Bad</button>
+        </div>
+
+        <!-- Section to Compare Movies -->
+        <div id="comparisonSection" style="display: none;" class="center">
+            <p id="comparisonQuestion">Which movie was better?</p>
+            <button id="movie1Button" onclick="chooseMovie1()"></button>
+            <button id="movie2Button" onclick="chooseMovie2()"></button>
+        </div>
+
         <!-- Div to Show Rankings -->
         <div id="rankedMovies">
             <h2>Ranked Movies:</h2>
@@ -111,33 +191,156 @@
     </div>
 
     <script>
-        // Example movie data for testing, use your real data here
-        let movies = [
-            { name: 'The Godfather', score: 9.8 },
-            { name: 'Inception', score: 9.2 },
-            { name: 'The Dark Knight', score: 8.9 },
-            { name: 'Pulp Fiction', score: 8.6 },
-            { name: 'Fight Club', score: 8.3 }
-        ];
+        const K = 32;  // Elo adjustment factor
+        let movies = { great: [], okay: [], bad: [] };
+        let newMovie = '';
+        let currentCategory = '';
+        let currentScore = 0;
+        let currentIndex = 0;
+        let comparisonCount = 0;
+        let reRankingMovie = null;
 
-        // Function to dynamically update the ranking list
+        // Add a movie and start the initial rating process
+        function submitMovie() {
+            newMovie = document.getElementById("movieName").value;
+            if (newMovie) {
+                document.getElementById("initialRating").style.display = 'block';
+                document.getElementById("movieName").value = '';
+            }
+        }
+
+        // Re-rank a movie that was clicked on the list
+        function rerankMovie(movie) {
+            reRankingMovie = movie;
+            newMovie = movie.name;  // Set the movie being re-ranked
+            document.getElementById("initialRating").style.display = 'block';  // Ask for re-rating (Great, Okay, Bad)
+        }
+
+        // Rate the movie and determine the category (re-rank or new)
+        function rateMovie(category) {
+            currentCategory = category;
+            currentScore = getInitialScoreRange(category);  // Get the initial score range
+            document.getElementById("initialRating").style.display = 'none';
+
+            if (reRankingMovie) {
+                const categoryMovies = movies[reRankingMovie.category];
+                const index = categoryMovies.indexOf(reRankingMovie);
+                if (index > -1) {
+                    categoryMovies.splice(index, 1);  // Remove from the previous category
+                }
+                reRankingMovie = null;
+            }
+
+            if (movies[category].length > 0) {
+                currentIndex = 0;
+                comparisonCount = 0;
+                showComparisonQuestion();
+            } else {
+                movies[category].push({ name: newMovie, score: currentScore, category: currentCategory });
+                updateRanking();
+            }
+        }
+
+        // Show the comparison question with two movies from the same category
+        function showComparisonQuestion() {
+            if (comparisonCount < 3 && currentIndex < movies[currentCategory].length) {
+                document.getElementById("comparisonSection").style.display = 'block';
+                document.getElementById("movie1Button").innerText = newMovie;
+                document.getElementById("movie2Button").innerText = movies[currentCategory][currentIndex].name;
+            } else {
+                finalizeMovieRanking();
+            }
+        }
+
+        // Handle "Movie 1" button click (new movie is better)
+        function chooseMovie1() {
+            adjustElo(movies[currentCategory][currentIndex], false);  // Existing movie loses
+            adjustElo({ name: newMovie, score: currentScore, category: currentCategory }, true);
+            comparisonCount++;
+            currentIndex++;
+            showComparisonQuestion();
+        }
+
+        // Handle "Movie 2" button click (existing movie is better)
+        function chooseMovie2() {
+            adjustElo(movies[currentCategory][currentIndex], true);  // Existing movie wins
+            adjustElo({ name: newMovie, score: currentScore, category: currentCategory }, false);
+            comparisonCount++;
+            currentIndex++;
+            showComparisonQuestion();
+        }
+
+        // Adjust the Elo score of the movie based on the outcome
+        function adjustElo(movie, didWin) {
+            const expectedOutcome = 1 / (1 + Math.pow(10, (currentScore - movie.score) / 400));
+            const actualOutcome = didWin ? 1 : 0;
+            const eloChange = K * (actualOutcome - expectedOutcome);
+            movie.score += eloChange;
+            if (movie.name === newMovie) {
+                currentScore += eloChange;  // Update the new movie's score
+            }
+            updateRanking();
+        }
+
+        // Finalize the ranking of the movie after comparisons
+        function finalizeMovieRanking() {
+            movies[currentCategory].push({ name: newMovie, score: currentScore, category: currentCategory });
+            document.getElementById("comparisonSection").style.display = 'none';
+            updateRanking();
+        }
+
+        // Get initial score range based on category
+        function getInitialScoreRange(category) {
+            if (category === 'great') return 1600;  // Elo mid-point for new entries
+            if (category === 'okay') return 1400;   // Elo mid-point for okay movies
+            if (category === 'bad') return 1200;    // Elo mid-point for bad movies
+        }
+
+        // Map Elo scores to a 5.0–9.0 range initially, then expand based on the number of movies
+        function mapEloToScore(elo, minElo, maxElo, numMovies) {
+            const baseMin = 5.0;
+            const baseMax = 9.0;
+            const fullRange = 10.0;  // 0.0–10.0 full range
+            const expansionFactor = Math.min((numMovies - 1) / 10, 1);  // Expands as more movies are added
+
+            const minScore = baseMin - (baseMin * expansionFactor);  // Dynamic lower boundary
+            const maxScore = baseMax + (fullRange - baseMax) * expansionFactor;  // Dynamic upper boundary
+
+            if (maxElo === minElo) return (minScore + maxScore) / 2;  // Handle case where all movies have the same Elo
+
+            // Map Elo score to the dynamic range
+            return ((elo - minElo) / (maxElo - minElo)) * (maxScore - minScore) + minScore;
+        }
+
+        // Ensure no duplicate scores by adjusting slight differences in scores
+        function ensureUniqueScores(movieList) {
+            for (let i = 0; i < movieList.length - 1; i++) {
+                if (movieList[i].score === movieList[i + 1].score) {
+                    movieList[i + 1].score -= 0.1;  // Adjust the next movie score slightly down
+                }
+            }
+        }
+
+        // Update the displayed list of ranked movies, ensuring unique scores
         function updateRanking() {
+            const allMovies = [...movies.great, ...movies.okay, ...movies.bad];
+            allMovies.sort((a, b) => b.score - a.score);  // Sort all movies by score
+
             const list = document.getElementById('movieList');
             list.innerHTML = '';  // Clear the current list
 
-            movies.forEach((movie, index) => {
+            allMovies.forEach((movie, index) => {
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <div class="movie-number">${index + 1}.</div>
                     <div class="movie-name">${movie.name}</div>
-                    <div class="movie-score">${movie.score.toFixed(1)}</div>
+                    <div class="movie-score">${mapEloToScore(movie.score, Math.min(...allMovies.map(m => m.score)), Math.max(...allMovies.map(m => m.score)), allMovies.length).toFixed(1)}</div>
                 `;
                 list.appendChild(li);
             });
-        }
 
-        // Initially load the ranking
-        updateRanking();
+            ensureUniqueScores(allMovies);  // Ensure no duplicate scores
+        }
     </script>
 </body>
 </html>

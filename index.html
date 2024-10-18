@@ -248,21 +248,24 @@
 
         // Update the ranking and display the movie list
         function updateRanking() {
-            const allMovies = [...movies.great, ...movies.okay, ...movies.bad];
-            allMovies.sort((a, b) => b.score - a.score);
+        const allMovies = [...movies.great, ...movies.okay, ...movies.bad];
 
-            const list = document.getElementById('movieList');
-            list.innerHTML = '';
+        // Sort movies from lowest to highest score (flipped order)
+        allMovies.sort((a, b) => b.score - a.score);
 
-            allMovies.forEach((movie, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="movie-number">${index + 1}.</div>
-                    <div class="movie-name">${movie.name}</div>
-                    <div class="movie-score">${movie.score.toFixed(1)}</div>
-                `;
-                list.appendChild(li);
-            });
+        const list = document.getElementById('movieList');
+        list.innerHTML = '';  // Clear the current list
+
+        // Display movies with reversed rank numbers
+        allMovies.forEach((movie, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="movie-number">${allMovies.length - index}.</div>
+            <div class="movie-name">${movie.name}</div>
+            <div class="movie-score">${movie.score.toFixed(1)}</div>
+        `;
+        list.appendChild(li);
+        });
         }
     </script>
 </body>

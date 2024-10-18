@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Ranking App with Graded Curves</title>
+    <title>Movie Ranking App</title>
     <style>
-        /* General Body Styles */
         body {
             font-family: 'Roboto', Arial, sans-serif;
             background-color: #f7f7f7;
@@ -25,7 +24,6 @@
             letter-spacing: 1px;
         }
 
-        /* Container */
         #container {
             max-width: 800px;
             margin: 40px auto;
@@ -42,7 +40,6 @@
             font-size: 1.1em;
         }
 
-        /* Input Field */
         input[type="text"] {
             padding: 12px;
             width: calc(100% - 24px);
@@ -52,7 +49,6 @@
             font-size: 1em;
         }
 
-        /* Button Styles */
         button {
             background-color: #3a86ff;
             color: white;
@@ -82,7 +78,6 @@
             margin-top: 10px;
         }
 
-        /* Movie List */
         ol {
             list-style: none;
             padding-left: 0;
@@ -97,12 +92,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: background-color 0.3s;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        ol li:hover {
-            background-color: #dfe7ec;
         }
 
         .movie-number {
@@ -119,7 +109,6 @@
             text-align: left;
         }
 
-        /* Circle Score */
         .movie-score {
             background-color: #000;
             color: white;
@@ -130,33 +119,11 @@
             justify-content: center;
             align-items: center;
             font-size: 1.2em;
-            margin-right: 10px;
         }
-
-        /* Responsive Media Query */
-        @media (max-width: 768px) {
-            #container {
-                padding: 20px;
-            }
-
-            h1 {
-                font-size: 2em;
-            }
-
-            ol li {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .movie-score {
-                margin-top: 10px;
-            }
-        }
-
     </style>
 </head>
 <body>
-    <h1>Movie Ranking App with Graded Curves</h1>
+    <h1>Movie Ranking App</h1>
     
     <div id="container">
         <!-- Form to Add Movie -->
@@ -185,7 +152,7 @@
         <div id="rankedMovies">
             <h2>Ranked Movies:</h2>
             <ol id="movieList">
-                <!-- Dynamic Movie Ranking will be displayed here -->
+                <!-- Movie list will appear here -->
             </ol>
         </div>
     </div>
@@ -198,9 +165,8 @@
         let currentScore = 0;
         let currentIndex = 0;
         let comparisonCount = 0;
-        let reRankingMovie = null;
 
-        // Add a movie and start the initial rating process
+        // Function to submit a movie and start the rating process
         function submitMovie() {
             newMovie = document.getElementById("movieName").value;
             if (newMovie) {
@@ -209,27 +175,11 @@
             }
         }
 
-        // Re-rank a movie that was clicked on the list
-        function rerankMovie(movie) {
-            reRankingMovie = movie;
-            newMovie = movie.name;  // Set the movie being re-ranked
-            document.getElementById("initialRating").style.display = 'block';  // Ask for re-rating (Great, Okay, Bad)
-        }
-
-        // Rate the movie and determine the category (re-rank or new)
+        // Rate the movie and determine the category
         function rateMovie(category) {
             currentCategory = category;
-            currentScore = getInitialScoreRange(category);  // Get the initial score range
+            currentScore = getInitialScoreRange(category);
             document.getElementById("initialRating").style.display = 'none';
-
-            if (reRankingMovie) {
-                const categoryMovies = movies[reRankingMovie.category];
-                const index = categoryMovies.indexOf(reRankingMovie);
-                if (index > -1) {
-                    categoryMovies.splice(index, 1);  // Remove from the previous category
-                }
-                reRankingMovie = null;
-            }
 
             if (movies[category].length > 0) {
                 currentIndex = 0;
@@ -254,7 +204,7 @@
 
         // Handle "Movie 1" button click (new movie is better)
         function chooseMovie1() {
-            adjustElo(movies[currentCategory][currentIndex], false);  // Existing movie loses
+            adjustElo(movies[currentCategory][currentIndex], false);
             adjustElo({ name: newMovie, score: currentScore, category: currentCategory }, true);
             comparisonCount++;
             currentIndex++;
@@ -263,81 +213,56 @@
 
         // Handle "Movie 2" button click (existing movie is better)
         function chooseMovie2() {
-            adjustElo(movies[currentCategory][currentIndex], true);  // Existing movie wins
+            adjustElo(movies[currentCategory][currentIndex], true);
             adjustElo({ name: newMovie, score: currentScore, category: currentCategory }, false);
             comparisonCount++;
             currentIndex++;
             showComparisonQuestion();
         }
 
-        // Adjust the Elo score of the movie based on the outcome
+        // Adjust the Elo score based on the comparison
         function adjustElo(movie, didWin) {
             const expectedOutcome = 1 / (1 + Math.pow(10, (currentScore - movie.score) / 400));
             const actualOutcome = didWin ? 1 : 0;
             const eloChange = K * (actualOutcome - expectedOutcome);
             movie.score += eloChange;
             if (movie.name === newMovie) {
-                currentScore += eloChange;  // Update the new movie's score
+                currentScore += eloChange;
             }
             updateRanking();
         }
 
-        // Finalize the ranking of the movie after comparisons
+        // Finalize the movie ranking after comparisons
         function finalizeMovieRanking() {
             movies[currentCategory].push({ name: newMovie, score: currentScore, category: currentCategory });
             document.getElementById("comparisonSection").style.display = 'none';
             updateRanking();
         }
 
-        // Get initial score range based on category
+        // Get the initial score range based on category
         function getInitialScoreRange(category) {
-            if (category === 'great') return 1600;  // Elo mid-point for new entries
-            if (category === 'okay') return 1400;   // Elo mid-point for okay movies
-            if (category === 'bad') return 1200;    // Elo mid-point for bad movies
+            if (category === 'great') return 1600;
+            if (category === 'okay') return 1400;
+            if (category === 'bad') return 1200;
         }
 
-        // Normalization function for graded scoring within categories
-        function normalizeScore(elo, minElo, maxElo, minRange, maxRange) {
-            if (maxElo === minElo) return (minRange + maxRange) / 2;  // Handle equal Elo scores
-            return ((elo - minElo) / (maxElo - minElo)) * (maxRange - minRange) + minRange;
-        }
-
-        // Update the displayed list of ranked movies, ensuring unique scores
+        // Update the ranking and display the movie list
         function updateRanking() {
             const allMovies = [...movies.great, ...movies.okay, ...movies.bad];
-
-            // Sort movies by category and score
-            allMovies.sort((a, b) => b.score - a.score);  // Sort all movies by score
+            allMovies.sort((a, b) => b.score - a.score);
 
             const list = document.getElementById('movieList');
-            list.innerHTML = '';  // Clear the current list
+            list.innerHTML = '';
 
-            const numMovies = allMovies.length;
-
-            // Normalize scores for each category
-            function mapCategoryScores(category, minRange, maxRange) {
-                const categoryMovies = movies[category];
-                if (categoryMovies.length > 0) {
-                    const minElo = Math.min(...categoryMovies.map(m => m.score));
-                    const maxElo = Math.max(...categoryMovies.map(m => m.score));
-
-                    categoryMovies.forEach((movie, index) => {
-                        const scaledScore = normalizeScore(movie.score, minElo, maxElo, minRange, maxRange).toFixed(1);
-                        const li = document.createElement('li');
-                        li.innerHTML = `
-                            <div class="movie-number">${allMovies.indexOf(movie) + 1}.</div>
-                            <div class="movie-name">${movie.name}</div>
-                            <div class="movie-score">${scaledScore}</div>
-                        `;
-                        list.appendChild(li);
-                    });
-                }
-            }
-
-            // Map scores for each category
-            mapCategoryScores('great', 7.0, 10.0);  // Great movies should be scored between 7.0 and 10.0
-            mapCategoryScores('okay', 4.0, 7.0);    // Okay movies should be scored between 4.0 and 7.0
-            mapCategoryScores('bad', 0.0, 4.0);     // Bad movies should be scored between 0.0 and 4.0
+            allMovies.forEach((movie, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="movie-number">${index + 1}.</div>
+                    <div class="movie-name">${movie.name}</div>
+                    <div class="movie-score">${movie.score.toFixed(1)}</div>
+                `;
+                list.appendChild(li);
+            });
         }
     </script>
 </body>
